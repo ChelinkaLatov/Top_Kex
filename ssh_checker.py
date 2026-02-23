@@ -333,7 +333,7 @@ def fingerprint_check(fingerprint:str):
             pprint(f"Fingerprint not found in database.", "result")
 
 # --- Logique principale ---
-def analyze_ssh(host:str=None, port:int=22, algodir:str="default", add_signature:bool=False) -> None:
+def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False) -> None:
     try:
         try:
             resolved_ip = socket.gethostbyname(host)
