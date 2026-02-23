@@ -1,0 +1,11 @@
+[project]
+name = "ssh-scanner"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "paramiko>=4.0.0",
+    "typer>=0.21.1",
+]
