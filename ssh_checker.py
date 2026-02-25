@@ -25,7 +25,7 @@ colour_map = {
     "signature": typer.colors.WHITE,          # No color
 }
 
-def pprint(msg: str = None, msg_t: str = None) -> None:
+def pprint(msg: str = "", msg_t: str = "") -> None:
     msg_letter = letters.get(msg_t, "?")
     colour = colour_map.get(msg_t, typer.colors.WHITE)
     typer.secho(f"[{msg_letter}] {msg}", fg=colour)
@@ -85,7 +85,7 @@ class IanaAlgorithms:
 # TODO: Diffie-hellman-group14-sha256 MUST be implemented according to IANA. Add a check to verify if present.
 # TODO: Check if when using AEAD the mac cannot be changed, this would break up the connection big time.
 
-def special_parse(values:list=[], algorithms:dict=None) -> None:   # TODO Add type 
+def special_parse(values:list=[], algorithms:dict=dict()) -> None:   # TODO Add type 
     for algorithm in values:
         only_algorithm = algorithm.split("@")[0] 
         algo_obj = algorithms.get(only_algorithm, Algorithm(algorithm, 'bad', '(Unknown Algorithm)'))
@@ -122,10 +122,11 @@ def perform_banner_exchange(s, copy_banner:bool=False): # C'est quoi le type de
         raw_banner = s.recv(1024)
     except OSError:
         pprint("Connection lost during banner exchange.", "error")
+        return ""
     
     if not raw_banner:
         pprint("No banner received from server.", "error")
-        return
+        return ""
 
     clean_banner = raw_banner.decode('utf-8', errors='ignore').strip()
     pprint(f"Raw Server Banner: {clean_banner}", "info")
@@ -163,12 +164,12 @@ def perform_banner_exchange(s, copy_banner:bool=False): # C'est quoi le type de
         s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.0\r\n")
     return clean_banner
 
-def analyze_algorithms(s, algodir:str="default"):
+def analyze_algorithms(s, algodir:str="default") -> str:
     try:
         raw_packet_len = s.recv(4)
         if not raw_packet_len:
             pprint("Connection closed before KEXINIT.", "bad")
-            return
+            return ""
         
         packet_len = struct.unpack(">I", raw_packet_len)[0]
         data = s.recv(packet_len)
@@ -276,8 +277,10 @@ def analyze_algorithms(s, algodir:str="default"):
             
     except Exception as e:
         pprint(f"Error during algorithm negotiation: {e}", "error")
+    
+    return ""
 
-def discover_auth_methods(host:str=None, port:int=22) -> str:
+def discover_auth_methods(host:str="", port:int=22) -> str:
     pprint("Probing for authentication methods via Transport...", "info")
     transport = None
     try:
@@ -287,12 +290,14 @@ def discover_auth_methods(host:str=None, port:int=22) -> str:
         
         try:
             transport.auth_none('')
+            methods = ["none"]
+            # Here add support for successful auth_none authentication (this should NOT happend in ANY case)
         except paramiko.BadAuthenticationType as err:
             methods = err.allowed_types
 
         if methods == []:
             pprint("Server returned an empty list of methods or session closed.", "warn")
-            return
+            return ""
 
         pprint(f"Authorized Methods: {', '.join(methods)}", "result")
         
@@ -312,13 +317,15 @@ def discover_auth_methods(host:str=None, port:int=22) -> str:
         for method in methods:
             label = auth_methods_map.get(method, ["Unknown method","info"])
             pprint(f"{label[0]:22}", label[1])
+        
+        return ",".join(methods)
 
     except Exception as e:
         pprint(f"Auth Discovery Error: {type(e).__name__} - {e}", "error")
     finally:
         if transport:
             transport.close()
-    return ",".join(methods)
+    return ""
 
 def make_fingerprint(host:str="", port:int=22, banner:str="", fingerprint:str="", methods:str="", write_to_file:bool=False) -> None:
     signature = f"{host}:{port};{banner};{fingerprint};{methods}\n"
@@ -337,7 +344,7 @@ def fingerprint_check(fingerprint:str) -> None:
             pprint(f"Fingerprint not found in database.", "result")
 
 # --- Logique principale ---
-def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False, copy_banner:bool=False) -> None:
+def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False, copy_banner:bool=False, enable_auth:bool=False) -> None:
     try:
         try:
             resolved_ip = socket.gethostbyname(host)
@@ -354,8 +361,11 @@ def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool
         with socket.create_connection((resolved_ip, port), timeout=1) as s:
             banner = perform_banner_exchange(s, copy_banner)
             fingerprint = analyze_algorithms(s, algodir)
-            methods = discover_auth_methods(host, port)
-            make_fingerprint(host, port, banner, fingerprint, methods, add_signature)
+            if enable_auth:
+                methods = discover_auth_methods(host, port)
+                make_fingerprint(host, port, banner, fingerprint, methods, add_signature)
+            else:
+                make_fingerprint(host, port, banner, fingerprint, "", add_signature)
             fingerprint_check(fingerprint)
             
     except socket.timeout:
