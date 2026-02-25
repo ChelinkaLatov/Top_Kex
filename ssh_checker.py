@@ -114,12 +114,12 @@ SSH_BANNER_RE = re.compile(
     r"^SSH-(?P<proto>[12]\.[0-9]+)-(?P<software>[^ ]+)(?:\s+(?P<comments>.+))?$"
 )
 
-def perform_banner_exchange(s): # C'est quoi le type de ce truc ?
+def perform_banner_exchange(s, copy_banner:bool=False): # C'est quoi le type de ce truc ?
     """
     Handles the SSH banner exchange. Returns the formatted banner string or None if it fails.
     """
     try:
-        raw_banner = s.recv(1024).decode('utf-8', errors='ignore').strip()
+        raw_banner = s.recv(1024)
     except OSError:
         pprint("Connection lost during banner exchange.", "error")
     
@@ -127,8 +127,9 @@ def perform_banner_exchange(s): # C'est quoi le type de ce truc ?
         pprint("No banner received from server.", "error")
         return
 
-    pprint(f"Raw Server Banner: {raw_banner}", "info")
-    match = SSH_BANNER_RE.search(raw_banner)
+    clean_banner = raw_banner.decode('utf-8', errors='ignore').strip()
+    pprint(f"Raw Server Banner: {clean_banner}", "info")
+    match = SSH_BANNER_RE.search(clean_banner)
 
     if match:
         proto = match.group('proto')
@@ -150,14 +151,17 @@ def perform_banner_exchange(s): # C'est quoi le type de ce truc ?
             #write_vuln("SSHv1 toujours disponible")
         elif proto.startswith("1."):
             pprint("Warning: Server is using legacy SSHv1.", "warn")
-            #write_vuln(f"SSHv1 toujours utilisé. Version {proto}")
+            #write_vuln(f"SSHv1 toujours supporté par le serveur. Version {proto}")
             
     else:
         pprint("Banner Breakdown: Non-conformant format.", "bad")
         pprint("The string does not follow the 'SSH-protoversion-softwareversion' structure.", "warn")
 
-    s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.0\r\n")
-    return f"SSH-{proto}-{software} {comments}"
+    if copy_banner:
+        s.sendall(raw_banner)
+    else:
+        s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.0\r\n")
+    return clean_banner
 
 def analyze_algorithms(s, algodir:str="default"):
     try:
@@ -316,14 +320,14 @@ def discover_auth_methods(host:str=None, port:int=22) -> str:
             transport.close()
     return ",".join(methods)
 
-def make_fingerprint(host:str=None, port:int=22, banner:str="", fingerprint:str="", methods:str="", write_to_file:bool=False):
+def make_fingerprint(host:str="", port:int=22, banner:str="", fingerprint:str="", methods:str="", write_to_file:bool=False) -> None:
     signature = f"{host}:{port};{banner};{fingerprint};{methods}\n"
     pprint(signature.strip(), "signature")
     if write_to_file:
         with open("signature_file", "a") as fp:
             fp.write(signature)
 
-def fingerprint_check(fingerprint:str):
+def fingerprint_check(fingerprint:str) -> None:
     
     with open("algorithms/known_hashes.json", "r") as fp:
         data = load(fp)
@@ -333,7 +337,7 @@ def fingerprint_check(fingerprint:str):
             pprint(f"Fingerprint not found in database.", "result")
 
 # --- Logique principale ---
-def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False) -> None:
+def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False, copy_banner:bool=False) -> None:
     try:
         try:
             resolved_ip = socket.gethostbyname(host)
@@ -348,7 +352,7 @@ def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool
 
         pprint(conn_msg, "info")
         with socket.create_connection((resolved_ip, port), timeout=1) as s:
-            banner = perform_banner_exchange(s)
+            banner = perform_banner_exchange(s, copy_banner)
             fingerprint = analyze_algorithms(s, algodir)
             methods = discover_auth_methods(host, port)
             make_fingerprint(host, port, banner, fingerprint, methods, add_signature)

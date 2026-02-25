@@ -9,3 +9,9 @@ dependencies = [
     "paramiko>=4.0.0",
     "typer>=0.21.1",
 ]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
