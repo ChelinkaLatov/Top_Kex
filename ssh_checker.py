@@ -135,11 +135,15 @@ def perform_banner_exchange(s, copy_banner:bool=False): # C'est quoi le type de
     if match:
         proto = match.group('proto')
         software = match.group('software')
+        versions = dict()
+        with open("algorithms/openssh_versions.json", "r") as fp:
+            versions = load(fp)
+
         comments = match.group('comments')
 
         pprint("Banner Conformity: RFC 4253 Compliant", "good")
         pprint(f"Protocol Version: {proto}", "result")
-        pprint(f"Software Version: {software}", "result")
+        pprint(f"Software Version: {software} ({versions.get(software.split('_',1)[1].split('p')[0], 'Could not get release date')})", "result")
         #write_vuln(f"Version logicielle partagée: {software}")
         
         if comments:
