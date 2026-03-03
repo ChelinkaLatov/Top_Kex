@@ -114,7 +114,7 @@ SSH_BANNER_RE = re.compile(
     r"^SSH-(?P<proto>[12]\.[0-9]+)-(?P<software>[^ ]+)(?:\s+(?P<comments>.+))?$"
 )
 
-def perform_banner_exchange(s, copy_banner:bool=False): # C'est quoi le type de ce truc ?
+def perform_banner_exchange(s, copy_banner:bool=False) -> str:
     """
     Handles the SSH banner exchange. Returns the formatted banner string or None if it fails.
     """
@@ -338,9 +338,9 @@ def make_fingerprint(host:str="", port:int=22, banner:str="", fingerprint:str=""
         with open("signature_file", "a") as fp:
             fp.write(signature)
 
-def fingerprint_check(fingerprint:str) -> None:
-    
-    with open("algorithms/known_hashes.json", "r") as fp:
+def fingerprint_check(fingerprint: str) -> None:
+    # algorithms should ALWAYS exists, else the tool will trash
+    with open(f"algorithms/known_hashes.json", "r") as fp:
         data = load(fp)
         if fingerprint in data.keys():
             pprint(f"Fingerprint found in database. Corresponding to :\n\t{'\n\t'.join(data[fingerprint])}", "result")
@@ -348,13 +348,23 @@ def fingerprint_check(fingerprint:str) -> None:
             pprint(f"Fingerprint not found in database.", "result")
 
 # --- Logique principale ---
-def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool=False, copy_banner:bool=False, enable_auth:bool=False) -> None:
+def analyze_ssh(
+    host: str,
+    port: int=22,
+    algodir: str="default",
+    add_signature: bool=False,
+    copy_banner: bool=False,
+    enable_auth: bool=False,
+    timeout: int=5
+    ) -> None:
     try:
+        if not (1 <= port <= 65535): 
+            raise ValueError("Invalid port number")
         try:
-            resolved_ip = socket.gethostbyname(host)
-        except socket.gaierror:
+            resolved_ip = socket.gethostbyname(host) # Pas de support de l'ipv6 pour le moment. Voir -> getaddrinfo
+        except socket.gaierror as e:
             pprint(f"Could not resolve hostname: {host}", "error")
-            return
+            raise RuntimeError("Unresolvable hostname") from e
 
         if host == resolved_ip:
             conn_msg = f"Connecting to {resolved_ip}:{port}..."
@@ -362,17 +372,38 @@ def analyze_ssh(host:str, port:int=22, algodir:str="default", add_signature:bool
             conn_msg = f"Connecting to ({host}) {resolved_ip}:{port}..."
 
         pprint(conn_msg, "info")
-        with socket.create_connection((resolved_ip, port), timeout=1) as s:
-            banner = perform_banner_exchange(s, copy_banner)
-            fingerprint = analyze_algorithms(s, algodir)
-            if enable_auth:
+        with socket.create_connection((resolved_ip, port), timeout=timeout) as s:
+            try:
+                banner = perform_banner_exchange(s, copy_banner)
+            except Exception as e:
+                raise RuntimeError(f"Error in the banner exchange : {e}") from e
+
+            try:
+                fingerprint = analyze_algorithms(s, algodir.lower())
+            except Exception as e:
+                raise RuntimeError(f"Error in the algorithm analysis : {e}") from e
+        
+        if enable_auth:
+            try:
                 methods = discover_auth_methods(host, port)
+            except Exception as e:
+                raise RuntimeError(f"Error in the auth discovery : {e}") from e
+            try:
                 make_fingerprint(host, port, banner, fingerprint, methods, add_signature)
-            else:
+            except Exception as e:
+                raise RuntimeError(f"Error in the complex fingerprinter maker : {e}") from e
+        else:
+            try:
                 make_fingerprint(host, port, banner, fingerprint, "", add_signature)
+            except Exception as e:
+                raise RuntimeError(f"Error in the simple fingerprinter maker : {e}") from e
+        
+        try:
             fingerprint_check(fingerprint)
+        except Exception as e:
+            raise RuntimeError(f"Error in the fingerprinter checker: {e}") from e
             
-    except socket.timeout:
+    except (socket.timeout, TimeoutError):
         pprint(f"Connection timed out to {host}:{port}", "error")
     except ConnectionRefusedError:
         pprint(f"Connection refused by {host}:{port}", "bad")
