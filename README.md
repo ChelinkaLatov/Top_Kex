@@ -13,13 +13,21 @@ L'outil vise un usage simple en audit black box ou gray box. Il ne remplace pas 
 
 ### Avec `pip`
 
-Installation locale recommandee dans un environnement virtuel :
+Installation recommandee dans un environnement virtuel dedie :
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install .
 ```
+
+Cette commande installe `top-kex` dans l'environnement Python actif. Une fois
+l'installation terminee, tu peux supprimer le dossier du depot et continuer a
+utiliser l'outil tant que l'environnement reste disponible.
+
+Pour une installation dans le Python du systeme, prefere un environnement dedie.
+Si tu veux tout de meme installer dans l'environnement Python courant, fais-le
+seulement si tu maitrises bien ses dependances.
 
 Puis :
 
@@ -34,6 +42,10 @@ Pour une installation en tant qu'outil CLI :
 ```bash
 uv tool install .
 ```
+
+`uv tool install .` cree un environnement outil isole. Tu peux donc supprimer
+le dossier du depot apres l'installation et continuer a utiliser `top-kex`
+sans dependre des fichiers sources.
 
 Puis :
 
@@ -107,7 +119,7 @@ uv run top-kex --help
 ## Limites
 
 - pas de support IPv6 pour le moment ;
-- l'analyse repose sur les fichiers de reference presents dans `algorithms/`.
+- l'analyse repose sur les fichiers de reference embarques dans le package installe.
 
 ## Contact
 
