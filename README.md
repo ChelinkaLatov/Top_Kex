@@ -11,7 +11,30 @@ L'outil vise un usage simple en audit black box ou gray box. Il ne remplace pas 
 
 ## Installation
 
+### Avec `uv` (recommande)
+
+Installation recommandee pour un usage CLI propre et isole :
+
+```bash
+uv tool install .
+```
+
+`uv tool install .` cree un environnement outil isole. Tu peux donc supprimer
+le dossier du depot apres l'installation et continuer a utiliser `top-kex`
+sans dependre des fichiers sources. C'est la methode recommandee pour eviter
+de melanger les dependances de l'outil avec celles de ton Python systeme.
+
+Puis :
+
+```bash
+top-kex --help
+```
+
 ### Avec `pip`
+
+`pip` fonctionne aussi, mais il faut bien choisir le mode d'installation.
+
+#### Option 1 - environnement virtuel dedie (recommande avec `pip`)
 
 Installation recommandee dans un environnement virtuel dedie :
 
@@ -25,27 +48,27 @@ Cette commande installe `top-kex` dans l'environnement Python actif. Une fois
 l'installation terminee, tu peux supprimer le dossier du depot et continuer a
 utiliser l'outil tant que l'environnement reste disponible.
 
-Pour une installation dans le Python du systeme, prefere un environnement dedie.
-Si tu veux tout de meme installer dans l'environnement Python courant, fais-le
-seulement si tu maitrises bien ses dependances.
-
-Puis :
+#### Option 2 - installation utilisateur
 
 ```bash
-top-kex --help
+pip install --user .
 ```
 
-### Avec `uv`
+Cette option evite en general de toucher au Python global du systeme, mais elle
+reste moins isolee qu'un environnement virtuel ou `uv tool`.
 
-Pour une installation en tant qu'outil CLI :
+#### Option 3 - installation dans le Python courant
 
 ```bash
-uv tool install .
+pip install .
 ```
 
-`uv tool install .` cree un environnement outil isole. Tu peux donc supprimer
-le dossier du depot apres l'installation et continuer a utiliser `top-kex`
-sans dependre des fichiers sources.
+Cette option installe `top-kex` dans l'environnement Python actuellement actif.
+Elle n'est a utiliser que si tu sais exactement quel interpreteur et quelles
+dependances tu modifies.
+
+Evite d'installer directement dans le Python systeme si tu veux minimiser les
+risques de conflit avec d'autres outils ou applications.
 
 Puis :
 
@@ -118,8 +141,7 @@ uv run top-kex --help
 
 ## Limites
 
-- pas de support IPv6 pour le moment ;
-- l'analyse repose sur les fichiers de reference embarques dans le package installe.
+- pas de support IPv6 pour le moment.
 
 ## Contact
 
