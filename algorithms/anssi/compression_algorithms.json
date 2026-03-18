@@ -1,4 +1,0 @@
-{
-    "none": {"status": "optimal", "label": ""},
-    "zlib": {"status": "warn", "label": "(Potential for side-channel attacks)"}
-}
