@@ -71,7 +71,8 @@ class IanaAlgorithms:
 
             with path.open("r", encoding="utf-8") as f:
                 data = load(f)
-                self._cache[name] = {k: Algorithm(k, **v) for k, v in data.items()}
+
+            self._cache[name] = {k: Algorithm(k, **v) for k, v in data.items()}
         return self._cache[name]
 
     @property

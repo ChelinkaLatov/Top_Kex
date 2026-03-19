@@ -20,6 +20,9 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "top_kex"
 module-root = "src"
+source-include = [
+    "algorithms/**/*.json",
+]
 
 
 [tool.pyrefly]
