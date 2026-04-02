@@ -137,8 +137,13 @@ SSH_BANNER_RE = re.compile(
 
 
 def perform_banner_exchange(s, copy_banner: bool = False) -> str:
+    raw_banner = b""
+    length = 0
     try:
-        raw_banner = s.recv(1024)
+        while (length < 1024) and (raw_banner[-2:] != b"\x0d\x0a"):
+            raw_banner += s.recv(1)
+            length += 1
+        # raw_banner = s.recv(1024) # Marche pas si le serveur n'attends pas le retour de banière.
     except OSError:
         pprint("Connection lost during banner exchange.", "error")
         return ""
@@ -159,10 +164,14 @@ def perform_banner_exchange(s, copy_banner: bool = False) -> str:
 
         comments = match.group("comments")
 
+        release_date = "no release date matches advertised version"
+        if "OpenSSH" in software:
+            release_date = versions.get(software.split('_', 1)[1].split('p')[0], 'Could not get release date')
+
         pprint("Banner Conformity: RFC 4253 Compliant", "good")
         pprint(f"Protocol Version: {proto}", "result")
         pprint(
-            f"Software Version: {software} ({versions.get(software.split('_', 1)[1].split('p')[0], 'Could not get release date')})",
+            f"Software Version: {software} ({release_date})",
             "result",
         )
 
@@ -186,7 +195,7 @@ def perform_banner_exchange(s, copy_banner: bool = False) -> str:
     if copy_banner:
         s.sendall(raw_banner)
     else:
-        s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.0\r\n")
+        s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.1\r\n")
     return clean_banner
 
 
