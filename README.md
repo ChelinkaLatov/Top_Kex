@@ -1,30 +1,30 @@
 # Top Kex
 
-Top Kex est un petit outil CLI Python pour interroger un serveur SSH et afficher rapidement :
+Top Kex est un petit outil CLI Python pour interroger un serveur SSH et afficher :
 
-- sa banniere SSH ;
-- les algorithmes proposes pendant la negociation ;
-- les methodes d'authentification annoncees en option ;
+- sa bannière SSH ;
+- les algorithmes proposés pendant la négociation ;
+- les méthodes d'authentification annoncées ;
 - une empreinte de configuration utile pour comparer un service a une base locale.
 
-L'outil vise un usage simple en audit black box ou gray box. Il ne remplace pas un audit complet de configuration SSH.
+L'outil vise un usage simple en audit boite noire ou boite grise. Il ne remplace pas une revue de configuration SSH.
 
 ## Installation
 
-### Avec `uv` (recommande)
+### Avec `uv` (méthode recommandée)
 
-Installation recommandee pour un usage CLI propre et isole :
+Installation recommandée pour un usage CLI propre et isolé:
 
 ```bash
 uv tool install .
 ```
 
-`uv tool install .` cree un environnement outil isole. Tu peux donc supprimer
-le dossier du depot apres l'installation et continuer a utiliser `top-kex`
-sans dependre des fichiers sources. C'est la methode recommandee pour eviter
-de melanger les dependances de l'outil avec celles de ton Python systeme.
+Cette commande crée un environnement outil isolé. Il est donc possible de supprimer
+le dossier du dépôt après l'installation et continuer à utiliser `top-kex`
+sans dépendre des fichiers sources. C'est la méthode recommandée pour éviter
+de mélanger les dépendances de l'outil avec celles du système.
 
-Puis :
+Pour vérifier que l'installation s'est bien passée :
 
 ```bash
 top-kex --help
@@ -34,9 +34,9 @@ top-kex --help
 
 `pip` fonctionne aussi, mais il faut bien choisir le mode d'installation.
 
-#### Option 1 - environnement virtuel dedie (recommande avec `pip`)
+#### Option 1 - environnement virtuel dédié (recommandé avec `pip`)
 
-Installation recommandee dans un environnement virtuel dedie :
+Installation recommandée dans un environnement virtuel dédie :
 
 ```bash
 python -m venv .venv
@@ -44,8 +44,8 @@ python -m venv .venv
 pip install .
 ```
 
-Cette commande installe `top-kex` dans l'environnement Python actif. Une fois
-l'installation terminee, tu peux supprimer le dossier du depot et continuer a
+Installe `top-kex` dans l'environnement Python actif. Une fois
+l'installation terminée, tu peux supprimer le dossier du dépôt et continuer a
 utiliser l'outil tant que l'environnement reste disponible.
 
 #### Option 2 - installation utilisateur
@@ -54,23 +54,11 @@ utiliser l'outil tant que l'environnement reste disponible.
 pip install --user .
 ```
 
-Cette option evite en general de toucher au Python global du systeme, mais elle
-reste moins isolee qu'un environnement virtuel ou `uv tool`.
+Cette option évite de toucher au Python global du système, mais elle
+reste moins isolée qu'un environnement virtuel ou avec un environnement uv.
 
-#### Option 3 - installation dans le Python courant
 
-```bash
-pip install .
-```
-
-Cette option installe `top-kex` dans l'environnement Python actuellement actif.
-Elle n'est a utiliser que si tu sais exactement quel interpreteur et quelles
-dependances tu modifies.
-
-Evite d'installer directement dans le Python systeme si tu veux minimiser les
-risques de conflit avec d'autres outils ou applications.
-
-Puis :
+Pour vérifier que l'installation s'est bien passée :
 
 ```bash
 top-kex --help
@@ -90,10 +78,8 @@ Exemples :
 top-kex 192.0.2.10
 top-kex ssh.example.org --port 2222
 top-kex ssh.example.org --algodir bsi
-top-kex ssh.example.org --enable-auth
+top-kex 51.210.106.154 --port 1306 --algodir anssi --enable-auth
 ```
-
-Si `HOST` est un nom DNS, l'outil affiche l'adresse IP resolue avant l'analyse.
 
 ## Options principales
 
@@ -116,7 +102,7 @@ top-kex --help
 top-kex 51.210.106.2 --algodir bsi
 ```
 
-Sortie abregee :
+Sortie abregée :
 
 ```text
 [i] Connecting to 51.210.106.2:22...
@@ -128,11 +114,13 @@ Sortie abregee :
 [x]     ecdh-sha2-nistp256 (BSI recommended)
 [+] Server seems resilient against Terrapin attack.
 [s] 51.210.106.2:22;SSH-2.0-OpenSSH_7.9p1 Debian-10+deb10u4;...
+[-] Fingerprint found in database. Corresponding to :
+	OpenSSH_7.9p1
 ```
 
 ## Installation pour le developpement
 
-Si tu veux simplement lancer le projet depuis le depot sans installation globale :
+Si tu veux lancer le projet depuis le dépôt sans installation globale :
 
 ```bash
 uv sync
@@ -141,7 +129,8 @@ uv run top-kex --help
 
 ## Limites
 
-- pas de support IPv6 pour le moment.
+- pas de support des range ip / de CIDR pour scanner des plages d'adresses
+- pas de support IPv6
 
 ## Contact
 
