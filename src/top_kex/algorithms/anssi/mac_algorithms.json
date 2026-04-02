@@ -1,0 +1,22 @@
+
+{
+    "hmac-sha2-512-etm":             {"status": "optimal", "label": ""},
+    "hmac-sha2-256-etm":             {"status": "optimal", "label": ""},
+    "umac-128-etm":                  {"status": "optimal", "label": ""},
+    "aes256-gcm":                    {"status": "optimal", "label": ""},
+    "aes128-gcm":                    {"status": "optimal", "label": ""},
+
+    "hmac-sha2-512":                 {"status": "good", "label": ""},
+    "hmac-sha2-256":                 {"status": "good", "label": ""},
+    "umac-128":                      {"status": "good", "label": ""},
+    "hmac-sha1-etm":                 {"status": "good", "label": ""},
+
+    "umac-64-etm":                   {"status": "bad",  "label": ""},
+    "umac-64":                       {"status": "bad",  "label": ""},
+    
+    "hmac-sha1":                     {"status": "error",  "label": ""},
+    "hmac-sha1-96":                  {"status": "error",  "label": ""},
+    "hmac-md5":                      {"status": "error", "label": ""},
+    "hmac-md5-96":                   {"status": "error", "label": ""},
+    "none":                          {"status": "error", "label": ""}
+}

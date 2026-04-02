@@ -1,0 +1,4 @@
+{
+    "none": {"status": "good", "label": "No compression"},
+    "zlib": {"status": "good", "label": "Standard zlib compression"}
+}
