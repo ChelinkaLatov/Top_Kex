@@ -1,4 +1,4 @@
-# Ciphers
+# Ciphers
 
 Ici, les suites de chiffrement sont inscrites pour pouvoir changer / faire de nouveaux formats.
 pour créer un nouveau format, il faut:
