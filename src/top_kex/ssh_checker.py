@@ -50,6 +50,10 @@ class Algorithm:
     name: str
     status: str
     label: Optional[str] = None
+    
+    @property
+    def only_algo(self):
+        return name.split("@")[0]
 
 
 @dataclass
@@ -104,12 +108,14 @@ class IanaAlgorithms:
 
 
 def special_parse(values: List[str], algorithms: Dict[str, Algorithm]) -> None:
+    print(values)
     for algorithm in values:
         only_algorithm = algorithm.split("@")[0]
+        
         algo_obj = algorithms.get(
             only_algorithm, Algorithm(algorithm, "bad", "(Unknown Algorithm)")
         )
-        pprint(f"\t{algo_obj.name} {algo_obj.label}", algo_obj.status)
+        pprint(f"\t{algorithm} {algo_obj.label}", algo_obj.status)
 
 
 def parse_ssh_string(data, offset: int) -> Tuple[List[str], int]:
