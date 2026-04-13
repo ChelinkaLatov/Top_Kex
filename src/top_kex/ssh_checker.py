@@ -103,12 +103,10 @@ class IanaAlgorithms:
         return self._handle_missing_value(name)
 
     def _handle_missing_value(self, name):
-        print(f"{name} asked")
         return None
 
 
 def special_parse(values: List[str], algorithms: Dict[str, Algorithm]) -> None:
-    print(values)
     for algorithm in values:
         only_algorithm = algorithm.split("@")[0]
         
@@ -117,25 +115,13 @@ def special_parse(values: List[str], algorithms: Dict[str, Algorithm]) -> None:
         )
         pprint(f"\t{algorithm} {algo_obj.label}", algo_obj.status)
 
-
-def parse_ssh_string(data, offset: int) -> Tuple[List[str], int]:
-    if offset + 4 > len(data):
-        return [], offset
-    length = struct.unpack(">I", data[offset : offset + 4])[0]
-    offset += 4
-    string_data = data[offset : offset + length].decode("utf-8", errors="ignore")
-    return string_data.split(","), offset + length
-
-
-def build_ssh_packet(payload):
-    pad_len = 8 - ((len(payload) + 5) % 8)
-    if pad_len < 4:
-        pad_len += 8
-
-    total_len = len(payload) + pad_len + 1
-    packet = struct.pack(">IB", total_len, pad_len) + payload + (b"\x00" * pad_len)
-    return packet
-
+def read_name_list(s) -> List[str]: # dafuq is the type ?
+    raw_name_list_len = s.recv(4)
+    name_list_len = struct.unpack(">I", raw_name_list_len)[0]
+    raw_name_list = s.recv(name_list_len)
+    utf8_name_list = raw_name_list.decode("utf-8") # errors = "ignore" ???
+    name_list = utf8_name_list.split(",")
+    return name_list
 
 SSH_BANNER_RE = re.compile(
     r"^SSH-(?P<proto>[12]\.[0-9]+)-(?P<software>[^ ]+)(?:\s+(?P<comments>.+))?$"
@@ -145,11 +131,18 @@ SSH_BANNER_RE = re.compile(
 def perform_banner_exchange(s, copy_banner: bool = False) -> str:
     raw_banner = b""
     length = 0
-    try:
-        while (length < 1024) and (raw_banner[-2:] != b"\x0d\x0a"):
-            raw_banner += s.recv(1)
-            length += 1
-        # raw_banner = s.recv(1024) # Marche pas si le serveur n'attends pas le retour de banière.
+    try: # Add read for infinite comment lines before connecting.
+        while True: # Is there a limit to the number of newlines that can be sent ? RFC does not tell.
+            raw_banner = b""
+            length = 0
+            while (length <= 255) and (raw_banner[-2:] != b"\x0d\x0a"):
+                raw_banner += s.recv(1)
+                length += 1
+            
+            if raw_banner[:4] == b"SSH-":
+                break    
+            pprint(f"Received the pre-banner comment: {raw_banner}", "info")
+
     except OSError:
         pprint("Connection lost during banner exchange.", "error")
         return ""
@@ -174,7 +167,7 @@ def perform_banner_exchange(s, copy_banner: bool = False) -> str:
         if "OpenSSH" in software:
             release_date = versions.get(software.split('_', 1)[1].split('p')[0], 'Could not get release date')
 
-        pprint("Banner Conformity: RFC 4253 Compliant", "good")
+        #pprint("Banner Conformity: RFC 4253 Compliant", "good")
         pprint(f"Protocol Version: {proto}", "result")
         pprint(
             f"Software Version: {software} ({release_date})",
@@ -198,7 +191,7 @@ def perform_banner_exchange(s, copy_banner: bool = False) -> str:
             "warn",
         )
 
-    if copy_banner:
+    if copy_banner: # Should be the default option ?
         s.sendall(raw_banner)
     else:
         s.sendall(b"SSH-2.0-Chelinka_SSH_Scanner_1.1\r\n")
@@ -212,22 +205,27 @@ def analyze_algorithms(s, algodir: str = "default") -> str:
             pprint("Connection closed before KEXINIT.", "bad")
             return ""
 
-        packet_len = struct.unpack(">I", raw_packet_len)[0]
-        data = s.recv(packet_len)
+        packet_max_len = struct.unpack(">I", raw_packet_len)[0]
+        #data = s.recv(packet_len)
 
-        if len(data) > 1 and data[1] == 20:
+        dunno = s.recv(1)
+        raw_ssh_msg_type = s.recv(1) # Should be 20 for KEXINIT
+        ssh_msg_type = raw_ssh_msg_type[0] # Disgusting implicit conversion from byte to integer
+
+        if ssh_msg_type == 20:
             pprint("SSH_MSG_KEXINIT received. Parsing protocol lists...", "info")
 
-            offset = 18
+            cookie = s.recv(16)
+            pprint(f"Got random cookie {cookie.hex()}", "info")
 
-            kex, offset = parse_ssh_string(data, offset)
-            hkey, offset = parse_ssh_string(data, offset)
-            enc_ctos, offset = parse_ssh_string(data, offset)
-            enc_stoc, offset = parse_ssh_string(data, offset)
-            mac_ctos, offset = parse_ssh_string(data, offset)
-            mac_stoc, offset = parse_ssh_string(data, offset)
-            comp_ctos, offset = parse_ssh_string(data, offset)
-            comp_stoc, offset = parse_ssh_string(data, offset)
+            kex = read_name_list(s)
+            hkey = read_name_list(s)
+            enc_ctos = read_name_list(s)
+            enc_stoc = read_name_list(s)
+            mac_ctos = read_name_list(s)
+            mac_stoc = read_name_list(s)
+            comp_ctos = read_name_list(s)
+            comp_stoc = read_name_list(s)
 
             path = DATA_DIR / algodir
 
@@ -305,9 +303,9 @@ def analyze_algorithms(s, algodir: str = "default") -> str:
                 if ianaDicos.macs[mac.split("@")[0]].status not in ["good", "optimal"]:
                     vuln_macs.append(mac)
 
-            if offset < len(data):
-                first_kex_follows = data[offset]
-                pprint(f"First KEX Packet Follows: {bool(first_kex_follows)}", "info")
+            #if offset < len(data):
+            #    first_kex_follows = data[offset]
+            #    pprint(f"First KEX Packet Follows: {bool(first_kex_follows)}", "info")
 
             all_lists = ":".join(
                 [
@@ -328,7 +326,7 @@ def analyze_algorithms(s, algodir: str = "default") -> str:
 
         else:
             pprint(
-                f"Unexpected packet type: {data[1] if len(data) > 1 else 'Unknown'}",
+                f"Unexpected packet type: {ssh_msg_type}",
                 "warn",
             )
 
@@ -396,6 +394,7 @@ def make_fingerprint(
 ) -> None:
     signature = f"{host}:{port};{banner};{fingerprint};{methods}\n"
     pprint(signature.strip(), "signature")
+    
     if write_to_file:
         with SIGNATURE_FILE.open("a", encoding="utf-8") as fp:
             fp.write(signature)
